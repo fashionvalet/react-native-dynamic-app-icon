@@ -9,13 +9,29 @@
 
 RCT_EXPORT_MODULE()
 
-RCT_EXPORT_METHOD(setAppIcon:(NSString *)name)
+RCT_EXPORT_METHOD(setAppIcon:(NSString *)iconName)
 {
-  [[UIApplication sharedApplication] setAlternateIconName:name completionHandler:^(NSError * _Nullable error) {
-    if (error != nil) {
-      RCTLog(@"%@", [error description]);
+    //anti apple private method call analyse
+    if ([[UIApplication sharedApplication] respondsToSelector:@selector(supportsAlternateIcons)] &&
+        [[UIApplication sharedApplication] supportsAlternateIcons])
+    {
+        NSMutableString *selectorString = [[NSMutableString alloc] initWithCapacity:40];
+        [selectorString appendString:@"_setAlternate"];
+        [selectorString appendString:@"IconName:"];
+        [selectorString appendString:@"completionHandler:"];
+
+        SEL selector = NSSelectorFromString(selectorString);
+        IMP imp = [[UIApplication sharedApplication] methodForSelector:selector];
+        void (*func)(id, SEL, id, id) = (void *)imp;
+        if (func)
+        {
+            func([UIApplication sharedApplication], selector, iconName, ^(NSError * _Nullable error) {
+                if (error != nil) {
+                  RCTLog(@"%@", [error description]);
+                }
+            });
+        }
     }
-  }];
 }
 
 RCT_REMAP_METHOD(supportsDynamicAppIcon, resolver:(RCTPromiseResolveBlock)resolve rejecter:(RCTPromiseRejectBlock)reject)
